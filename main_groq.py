@@ -82,6 +82,25 @@ class BrowserController:
                 if f.is_file(): f.unlink()
             print("[+] Сессии (Недавние вкладки) уничтожены.")
 
+    def mask_crash_warning(self):
+        prefs_path = self.profile_path / "Preferences"
+        if prefs_path.exists():
+            try:
+                with open(prefs_path, 'r', encoding='utf-8') as f:
+                    prefs = json.load(f)
+                
+                # Сбрасываем флаги аварийного завершения
+                if "profile" in prefs:
+                    prefs["profile"]["exit_type"] = "Normal"
+                    prefs["profile"]["exited_cleanly"] = True
+                    
+                with open(prefs_path, 'w', encoding='utf-8') as f:
+                    # separators=(',', ':') минимизирует размер файла, как это делает сам Chrome
+                    json.dump(prefs, f, separators=(',', ':'))
+                print("[+] Следы принудительного закрытия убраны (Preferences пропатчен).")
+            except Exception as e:
+                print(f"[-] Не удалось пропатчить Preferences: {e}")
+
 # ==========================================
 # 3. БАЗА ДАННЫХ (Только SQL-логика)
 # ==========================================
@@ -203,6 +222,7 @@ class GhostDirector:
         self.browser.kill_browser()
         self.db.create_backup()
         self.browser.wipe_sessions()
+        self.browser.mask_crash_warning()
         
         if force_wipe:
             self.db.wipe_all()
